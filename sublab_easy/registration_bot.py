@@ -70,8 +70,7 @@ def openrouter_client() -> OpenAI:
     key = os.environ.get("OPENROUTER_API_KEY")
     if not key:
         raise RuntimeError("OPENROUTER_API_KEY is not set. Copy .env.example to .env.")
-    # TODO: return an OpenAI client whose base_url is OPENROUTER_BASE_URL
-    raise NotImplementedError
+    return OpenAI(api_key=key, base_url=OPENROUTER_BASE_URL)
 
 
 def client_for(via: str) -> OpenAI:
@@ -107,8 +106,68 @@ def build_system_prompt(catalogue: dict) -> str:
     Returns:
         The system prompt, as a single string.
     """
-    # TODO
-    raise NotImplementedError
+    rules = catalogue["rules"]
+    student = catalogue["student"]
+    titles = {c["code"]: c["title"] for c in catalogue["courses"]}
+
+    # One block per course, every fact on its own labelled line, with the
+    # derived facts (seats left, FULL, already passed) computed here rather
+    # than left for the model to work out.
+    lines = []
+    for c in catalogue["courses"]:
+        left = c["seats_total"] - c["seats_taken"]
+        status = "FULL - cannot register" if left <= 0 else "%d seat(s) left" % left
+        if c["code"] in student["completed"]:
+            status += "; STUDENT ALREADY PASSED THIS COURSE"
+        prereqs = ", ".join(c["prerequisites"]) or "none"
+        times = "; ".join("%s %s-%s" % (m["day"], m["start"], m["end"])
+                          for m in c["schedule"])
+        lines.append(
+            "- %s %s\n"
+            "    credits: %d\n"
+            "    prerequisites: %s\n"
+            "    meets: %s\n"
+            "    seats: %d of %d taken (%s)\n"
+            "    instructor: %s"
+            % (c["code"], c["title"], c["credits"], prereqs, times,
+               c["seats_taken"], c["seats_total"], status, c["instructor"]))
+
+    completed = ", ".join("%s (%s)" % (code, titles.get(code, "?"))
+                          for code in student["completed"])
+
+    return "\n".join([
+        "You are the course-registration advisor for Narxoz University, term %s."
+        % catalogue["term"],
+        "",
+        "THE CATALOGUE BELOW IS THE ONLY SOURCE OF TRUTH. It lists every course "
+        "that exists this term. If a student mentions a course code or title "
+        "that is not in this list, say plainly that it does not exist in the "
+        "catalogue and refuse to register it. Never invent a course, credits, "
+        "a room, a schedule or an instructor.",
+        "",
+        "COURSE CATALOGUE (%d courses):" % len(catalogue["courses"]),
+        *lines,
+        "",
+        "THE STUDENT:",
+        "- id %s, year %d, programme %s"
+        % (student["student_id"], student["year"], student["programme"]),
+        "- already completed (passed): %s" % completed,
+        "",
+        "REGISTRATION RULES:",
+        "- credit load per term: minimum %d, maximum %d."
+        % (rules["min_credits"], rules["max_credits"]),
+        "- %s" % rules["note"],
+        "- Two courses collide if they meet on the same day at overlapping times.",
+        "",
+        "HOW TO ANSWER:",
+        "- Before approving any registration, check every rule for every course: "
+        "prerequisites completed, seats left, not already passed, no time "
+        "collision with the other requested courses, credit limit.",
+        "- If a request breaks a rule, say which rule and which course, and do not "
+        "register it.",
+        "- Show credit arithmetic explicitly.",
+        "- Answer in the language the student writes in. Be concise.",
+    ])
 
 
 # --------------------------------------------------------------------------
@@ -130,9 +189,13 @@ def chat(messages: list[dict], model: str = "gpt-5.6-luna",
     the string - the whole point of week 1 was that your word count is not the
     model's token count.
     """
-    # TODO: client_for(via).chat.completions.create(...), then pull the text
-    #       out of .choices and the counts out of .usage.
-    raise NotImplementedError
+    resp = client_for(via).chat.completions.create(model=model, messages=messages)
+    return {
+        "text": resp.choices[0].message.content or "",
+        "input_tokens": resp.usage.prompt_tokens,
+        "output_tokens": resp.usage.completion_tokens,
+        "model": model,
+    }
 
 
 def ask_once(prompt: str, model: str = "gpt-5.6-luna",
@@ -183,8 +246,7 @@ def estimate_cost(input_tokens: int, output_tokens: int,
     >>> estimate_cost(0, 0, 5.0, 30.0)
     0.0
     """
-    # TODO
-    raise NotImplementedError
+    return (input_tokens * rate_in + output_tokens * rate_out) / 1_000_000
 
 
 def cost_of(usage: dict) -> float:
@@ -202,8 +264,7 @@ def conversation_cost(usages: list[dict]) -> float:
     >>> conversation_cost([])
     0.0
     """
-    # TODO
-    raise NotImplementedError
+    return float(sum(cost_of(u) for u in usages))
 
 
 # --------------------------------------------------------------------------
@@ -217,7 +278,7 @@ SCRIPT = [
     "Register me for CSS-4007 and CSS-4102.",
     "How many credits would that be in total, and am I within the limit?",
     "Add CSS-4090 Quantum Machine Learning to my schedule.",
-    "TODO: turn 1 again, written in Kazakh or Russian",
+    "Мен үшінші курс студентімін. Қандай курстарға әлі тіркеле аламын?",
 ]
 
 

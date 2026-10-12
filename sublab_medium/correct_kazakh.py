@@ -9,6 +9,7 @@ Fill in every `TODO`. Keep the function signatures.
 
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -49,8 +50,20 @@ def build_prompt(corrupted: str) -> str:
     Asking for a fixed shape instead of prose is how you make six models
     comparable. Week 3 turns this into a topic.
     """
-    # TODO
-    raise NotImplementedError
+    return (
+        "The following text is a sentence in Kazakh (Cyrillic script). It has "
+        "been damaged and may contain: Russian letters in place of Kazakh ones "
+        "(а for ә, к for қ, н for ң, и for і ...), letters from the wrong "
+        "alphabet (Latin letters that look like Cyrillic ones), a missing "
+        "hyphen, two words joined together, or a doubled letter.\n\n"
+        "Restore the correct Kazakh sentence. Change only what is broken; do "
+        "not rephrase, translate or reorder words.\n\n"
+        "Reply with exactly this JSON and nothing else - no prose, no code "
+        "fences:\n"
+        '{"corrected": "<the corrected sentence>", '
+        '"changes": ["<one short description per change>", "..."]}\n\n'
+        "Text:\n" + corrupted
+    )
 
 
 def parse_response(text: str) -> dict:
@@ -60,8 +73,22 @@ def parse_response(text: str) -> dict:
     like. Be forgiving: find the JSON, parse it, and raise ValueError with the
     offending text if you truly cannot.
     """
-    # TODO
-    raise NotImplementedError
+    # Strip ```json fences, then try every "{" as a start point: raw_decode
+    # stops at the end of the first complete object, so trailing prose is fine.
+    cleaned = re.sub(r"```(?:json)?", "", text or "")
+    decoder = json.JSONDecoder()
+    for m in re.finditer(r"\{", cleaned):
+        try:
+            obj, _ = decoder.raw_decode(cleaned[m.start():])
+        except json.JSONDecodeError:
+            continue
+        if isinstance(obj, dict) and "corrected" in obj:
+            changes = obj.get("changes") or []
+            if isinstance(changes, str):
+                changes = [changes]
+            return {"corrected": str(obj["corrected"]).strip(),
+                    "changes": list(changes)}
+    raise ValueError("no JSON with a 'corrected' field in reply: %r" % text)
 
 
 def correct_with(model: str, corrupted: str, via: str) -> dict:
@@ -75,8 +102,15 @@ def correct_with(model: str, corrupted: str, via: str) -> dict:
     `ask_once` from sublab_easy - there is no conversation here, just one
     prompt and one reply, eight times per model.
     """
-    # TODO
-    raise NotImplementedError
+    reply = ask_once(build_prompt(corrupted), model=model, via=via)
+    parsed = parse_response(reply["text"])
+    return {
+        "corrected": parsed["corrected"],
+        "changes": parsed["changes"],
+        "input_tokens": reply["input_tokens"],
+        "output_tokens": reply["output_tokens"],
+        "model": model,
+    }
 
 
 def score_correction(returned: str, expected: str) -> dict:
@@ -90,8 +124,9 @@ def score_correction(returned: str, expected: str) -> dict:
     the original still counts as a correction. Your written analysis is where
     you make that call.
     """
-    # TODO
-    raise NotImplementedError
+    diff = sum(1 for a, b in zip(returned, expected) if a != b)
+    diff += abs(len(returned) - len(expected))
+    return {"exact": returned == expected, "char_diff": diff}
 
 
 def run_all() -> list[dict]:
