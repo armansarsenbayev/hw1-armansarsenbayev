@@ -22,7 +22,8 @@ DATA = Path(__file__).resolve().parent.parent / "data" / "kazakh_errors.json"
 
 # Every model you must run. Keep the order - it is the order of your table.
 MODELS = [
-    ("openrouter", "google/gemma-4-26b-a4b-it:free"),
+    # :free kept returning 429 (upstream pool rate-limited); same weights, paid.
+    ("openrouter", "google/gemma-4-26b-a4b-it"),
     ("openrouter", "qwen/qwen3.8-27b"),
     ("openrouter", "deepseek/deepseek-v4-flash-0731"),
     ("openai", "gpt-5.6-luna"),

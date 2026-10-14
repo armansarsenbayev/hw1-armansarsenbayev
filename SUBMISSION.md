@@ -1,9 +1,9 @@
 # HW1 submission
 
 **Name:** Arman Sarsenbayev
-**Student ID:** TODO
-**Group:** TODO
-**Repository:** TODO
+**Student ID:** s23069008
+**Group:** CSS4007-ENG-8
+**Repository:** https://github.com/armansarsenbayev/hw1-armansarsenbayev
 
 ## AI tool disclosure
 
@@ -15,6 +15,21 @@ is not.
 > numbers in my tables. I reviewed the code, re-ran the scripts myself, and
 > edited the answers. All numbers below are copied from the program output
 > saved in `outputs/` (which is gitignored).
+
+**Gemma: free vs paid route.** `google/gemma-4-26b-a4b-it:free` returned HTTP
+429 on every call for ~20 minutes (12 retries with backoff, then again later):
+
+```
+Error code: 429 - 'google/gemma-4-26b-a4b-it:free is temporarily rate-limited
+upstream. Please retry shortly, or add your own key ...'
+'provider_name': 'Google AI Studio', 'limit_source': 'upstream_provider_shared_pool'
+```
+
+The paid models on the same key worked at the same moment, so it was the free
+pool, not my key. I therefore ran the **paid route to the same weights,
+`google/gemma-4-26b-a4b-it`** ($0.0765 in / $0.255 out per 1M, from
+OpenRouter's `/models` on 2026-10-14; added to `RATES_PER_MTOK`). Every Gemma
+number below is from that paid route.
 
 ---
 
@@ -47,18 +62,16 @@ is not.
 | 5 | 1436 | 392 | 0.000758 |
 | **total** | 6154 | 1231 | 0.002708 |
 
-### Run 2 — OpenRouter, `google/gemma-4-26b-a4b-it:free`
-
-TODO — needs `OPENROUTER_API_KEY`.
+### Run 2 — OpenRouter, `google/gemma-4-26b-a4b-it` (paid route, see above)
 
 | Turn | Input tokens | Output tokens | Cost $ |
 |---|---|---|---|
-| 1 | | | |
-| 2 | | | |
-| 3 | | | |
-| 4 | | | |
-| 5 | | | |
-| **total** | | | |
+| 1 | 1005 | 287 | 0.000150 |
+| 2 | 1318 | 150 | 0.000139 |
+| 3 | 1501 | 76 | 0.000134 |
+| 4 | 1591 | 28 | 0.000129 |
+| 5 | 1650 | 391 | 0.000226 |
+| **total** | 7065 | 932 | 0.000778 |
 
 ### Turn 4, verbatim
 
@@ -74,7 +87,7 @@ exactly as they came back — do not tidy them.
 **OpenRouter:**
 
 ```
-TODO
+I cannot add **CSS-4090 Quantum Machine Learning** to your schedule. This course does not exist in the catalogue.
 ```
 
 ### Written answers
@@ -110,6 +123,13 @@ happens to the bill at fifty turns?**
 > ~850-token system prompt and ~140 tokens added per turn, 50 turns would send
 > about 50·850 + 140·(1+2+…+49) ≈ 42k + 172k ≈ 214k input tokens — about 35×
 > what these five turns cost, not 10×, for the same kind of questions.
+>
+> Gemma shows the same climb: 1005 → 1318 → 1501 → 1591 → 1650. Here each jump
+> is almost exactly the previous reply plus the new question: +313 after 287
+> output tokens, +183 after 150, +90 after 76, +59 after 28. Gemma has no
+> hidden reasoning, so its whole output is re-sent — which supports the
+> explanation of luna's smaller first jump above. Gemma also starts higher
+> (1005 vs 872) on the same system prompt: a different tokenizer.
 
 **3. Turn 4: did the bot refuse, or did it invent CSS-4090?** If it refused, what
 in your system prompt held the line? If it invented, what did it make up —
@@ -119,7 +139,11 @@ credits, a room, an instructor?
 > 2026-FALL catalogue, so I cannot register it." It invented nothing. What held
 > the line, I think, is that the prompt says the catalogue is *the only source
 > of truth*, gives the explicit count "(8 courses)", and spells out what not to
-> invent (course, credits, room, schedule, instructor). Gemma: TODO.
+> invent (course, credits, room, schedule, instructor). Gemma also refused:
+> "I cannot add **CSS-4090 Quantum Machine Learning** to your schedule. This
+> course does not exist in the catalogue." No invented credits, room or
+> instructor. Both bots held the line, so for this prompt the refusal rule
+> was strong enough even for the smaller model.
 
 **4. Where else was either bot wrong?** Turn 2 asks for two courses that meet at
 the same hour; two courses in the catalogue are full. Did the bots notice?
@@ -131,7 +155,21 @@ the same hour; two courses in the catalogue are full. Did the bots notice?
 > also cited "11 credits, below the minimum of 15" as a reason to refuse. The
 > minimum is a term-load rule, not a per-request rule, so that is a stricter
 > reading than the catalogue states. Turn 3's arithmetic (6 + 5 = 11, within
-> 30, below 15) was correct. Gemma: TODO.
+> 30, below 15) was correct.
+>
+> **Gemma missed the Tuesday collision completely.** Turn 1 listed CSS-4007,
+> CSS-4102 and FIN-3300 as eligible and then *recommended* "CSS-4007 +
+> CSS-4102 + FIN-3300 = 16 credits" — a timetable that cannot exist, since
+> CSS-4007 and CSS-4102 both meet Tuesday 09:00–10:50. In turn 2 it checked
+> each course and wrote "no collision" for both, and rejected the request
+> only because 11 < 15 credits. So it got the right answer (reject) for the
+> wrong reason. The collision was in the prompt as two `meets:` lines; I
+> never computed it for the model the way I computed FULL and PASSED, and
+> the one fact I left for it to derive is the one it got wrong. Gemma did
+> handle the full courses (CSS-4400 "FULL", CSS-3011 excluded as passed) and
+> the arithmetic (6 + 5 = 11). Turn 5 in Kazakh repeated the turn-1 answer
+> but the language leaked: "Бұл курстарды сіз әу already passed (өттіңіз)"
+> and "План толып тұр (FULL)" — English and Russian mixed into the Kazakh.
 
 ---
 
@@ -141,17 +179,55 @@ Paste the per-model summary printed by `correct_kazakh.py`:
 
 | Model | Exact | Failed | Tokens | Cost $ |
 |---|---|---|---|---|
-| google/gemma-4-26b-a4b-it:free | TODO | | | |
-| qwen/qwen3.8-27b | TODO | | | |
-| deepseek/deepseek-v4-flash-0731 | TODO | | | |
+| google/gemma-4-26b-a4b-it (paid route) | 4 | 0 | 34817 | 0.00861 |
+| qwen/qwen3.8-27b | 7 | 0 | 141802 | 0.44868 |
+| deepseek/deepseek-v4-flash-0731 | 8 | 0 | 33058 | 0.00898 |
 | gpt-5.6-luna | 6 | 0 | 5664 | 0.00542 |
 | gpt-5.6-terra | 7 | 0 | 2757 | 0.01936 |
 | gpt-5.6-sol | 7 | 0 | 3130 | 0.05960 |
 
-All three OpenAI models got the same 1,372 input tokens; output was 4,292
-(luna), 1,385 (terra), 1,758 (sol). luna's output is ~3× the others even though
-its visible JSON is the same size — the extra are reasoning tokens, billed as
-output.
+Input / output tokens for the same eight prompts:
+
+| Model | Input | Output |
+|---|---|---|
+| gemma | 1,492 | 33,325 |
+| qwen | 1,850 | 139,952 |
+| deepseek | 1,939 | 31,119 |
+| luna / terra / sol | 1,372 each | 4,292 / 1,385 / 1,758 |
+
+The OpenAI models all got the same 1,372 input tokens (same tokenizer). The
+three others counted the *same prompts* as 1,492–1,939 — each has its own
+tokenizer (and chat template). Output is where the money went:
+
+- **qwen** averaged ~17,500 output tokens per sentence (up to 44,536 on
+  KZ-08) for a one-line answer — almost all of it reasoning. That is why it
+  cost $0.45, 50–80× the others, and alone blew the "under $0.10" estimate
+  for the assignment.
+- **gemma** spent 32,768 of its 33,325 output tokens on **one** sentence,
+  KZ-05: it ran to the output cap and returned the sentence unchanged. That
+  single runaway call was $0.0084 of its $0.0086. The other seven cost
+  ~$0.0002 together.
+- **luna** produced ~3× terra's output for the same visible JSON — reasoning
+  tokens, billed as output.
+
+### Per sentence (6 models × 8 sentences)
+
+`E` = exact match. Otherwise the `char_diff` and my own judgement:
+✓ = correct Kazakh, ~ = errors fixed but text changed beyond them,
+✗ = not repaired / broken.
+
+| Sentence | Errors | gemma | qwen | deepseek | luna | terra | sol |
+|---|---|---|---|---|---|---|---|
+| KZ-01 | kaz_to_rus | 43 ~ | E | E | 43 ~ | E | E |
+| KZ-02 | drop_hyphen | E | E | E | E | E | E |
+| KZ-03 | latin_homoglyph | 35 ✗ | E | E | E | E | E |
+| KZ-04 | kaz_to_rus (partial) | 1 ✓ | E | E | E | 1 ✓ | 1 ✓ |
+| KZ-05 | join_words | 32 ✗ | E | E | 1 ✓ | E | E |
+| KZ-06 | double_letter | E | E | E | E | E | E |
+| KZ-07 | kaz_to_rus + join_words | E | E | E | E | E | E |
+| KZ-08 | latin_homoglyph + double_letter | E | 1 ~ | E | E | E | E |
+| **exact** | | 4 | 7 | 8 | 6 | 7 | 7 |
+| **judged correct** | | 4 ✓ + 1 ~ | 7 ✓ + 1 ~ | 8 | 7 ✓ + 1 ~ | 8 | 8 |
 
 ### Which error types did each model repair?
 
@@ -159,39 +235,69 @@ Rows are error labels, columns are models. Write "yes", "no" or "partial".
 
 | Error type | gemma | qwen | deepseek | luna | terra | sol |
 |---|---|---|---|---|---|---|
-| kaz_to_rus | TODO | TODO | TODO | partial | yes | yes |
-| latin_homoglyph | TODO | TODO | TODO | yes | yes | yes |
-| drop_hyphen | TODO | TODO | TODO | yes | yes | yes |
-| join_words | TODO | TODO | TODO | yes | yes | yes |
-| double_letter | TODO | TODO | TODO | yes | yes | yes |
+| kaz_to_rus | partial | yes | yes | partial | yes | yes |
+| latin_homoglyph | partial | yes | yes | yes | yes | yes |
+| drop_hyphen | yes | yes | yes | yes | yes | yes |
+| join_words | partial | yes | yes | yes | yes | yes |
+| double_letter | yes | yes | yes | yes | yes | yes |
+
+- **gemma, kaz_to_rus = partial:** KZ-04 and KZ-07 fixed; KZ-01 restored all
+  the letters but, exactly like luna, pluralised *мемлекеттің елшісінен* →
+  *мемлекеттердің елшілерінен*. Its change list also claims edits it never
+  made ("replaced а with ә in биркатар").
+- **gemma, join_words = partial:** KZ-07 fixed, KZ-05 not — the runaway
+  generation above, and the returned `changes` says "split
+  'ғимараттардыңқаншасы' into 'ғимараттардыңқаншасы'", i.e. nothing.
+- **qwen, KZ-08:** the homoglyphs and the double л were fixed, but it also
+  "corrected" *Ким* → *Кім*. Ким here is Kim Jong Un's surname, not a word
+  with a Russian и — an over-correction of a proper name. Its change list
+  also reports "replaced г with к in кездескісі", which it did not do.
+- **deepseek:** 8/8 exact, no over-edits.
 
 **The `latin_homoglyph` row: what happened?** Describe what you observed. The
 explanation is Sublab Harder's job, not this one's.
 
-> All three OpenAI models repaired both homoglyph rows exactly (KZ-03 and
-> KZ-08, which also had a doubled letter). luna's change list even named them:
-> "латынша A кириллше А-ға ауыстырылды", "латынша t кириллше т-ға
-> ауыстырылды". So on OpenAI models the homoglyph row was *not* the failure I
-> expected. TODO: what the three OpenRouter models did.
+> Five of six models repaired both homoglyph rows (KZ-03 and KZ-08). luna's
+> change list even named them: "латынша A кириллше А-ға ауыстырылды",
+> "латынша t кириллше т-ға ауыстырылды".
+>
+> **Gemma is the one that broke on it.** On KZ-03 it returned
+> *Алақтарға* for *Алаяқтарға* — it replaced the Latin letters but **lost the
+> я**, turning "scammers" into a non-word. Its change list says "Corrected
+> 'Aлaяқtарға' to 'Алақтарға' by replacing Latin/Russian letters with Kazakh
+> letters", so it did see that the word was mixed-script, but could not
+> rebuild it. It also added a comma and a question mark nobody asked for.
+> Interestingly, on KZ-08 (*Дoнaлльд Tрамп*) the same model was exact —
+> a famous name is easy to recover from context even when the letters are
+> scrambled; a less common word like *алаяқ* is not. It is the only sentence
+> in the whole table where a model damaged the word it was fixing.
 
 **Where a model returned good Kazakh that was not identical to the original,
 say so here.** Exact match is not correctness.
 
-> - luna, KZ-05 and terra/sol, KZ-04: identical except an added `?` at the end.
->   These are questions, so the `?` is fine Kazakh — counted as repaired.
-> - luna, KZ-01: all the Russian letters were restored correctly, but it also
->   changed *мемлекеттің елшісінен* ("from the ambassador of a state") to
->   *мемлекеттердің елшілерінен* ("from the ambassadors of states"). That is
->   grammatical Kazakh, and arguably better matches "бірқатар" (several), but it
->   changed the text beyond the letter errors it was asked to fix. Marked
->   "partial".
+> - luna KZ-05, terra/sol/gemma KZ-04: identical except an added `?` at the
+>   end. These are questions, so the `?` is fine Kazakh — counted as repaired.
+> - luna and gemma, KZ-01: all the Russian letters were restored correctly,
+>   but both also changed *мемлекеттің елшісінен* ("from the ambassador of a
+>   state") to *мемлекеттердің елшілерінен* ("from the ambassadors of states").
+>   That is grammatical Kazakh, and arguably better matches "бірқатар"
+>   (several), but it changed the text beyond the letter errors it was asked
+>   to fix — the prompt said "do not rephrase". Marked "~"/partial.
+> - qwen, KZ-08: *Кім* instead of *Ким* — one character, but it is wrong
+>   (a proper name), not a stylistic variant. Marked "~".
 
 **Cheapest model that was good enough, and why:**
 
-> Among the OpenAI models: luna at $0.0054 for all eight. It repaired every
-> error type; its only miss was an over-edit on KZ-01. terra was cleaner (no
-> rephrasing) but cost 3.6× more, and sol 11× more for the same 7/8 exact.
-> TODO: revisit once gemma (free) and deepseek (cheapest paid) are in.
+> **deepseek-v4-flash, $0.0090 for all eight.** It is the only model that was
+> exact on all eight sentences with no over-edits. Strictly cheaper ones:
+> luna ($0.0054) fixed every error type but rewrote KZ-01 against the
+> instruction, and gemma ($0.0086) broke KZ-03 and failed KZ-05 — not good
+> enough. If a single over-edit is acceptable, luna is the cheapest; for a
+> correction tool that must "change only what is broken", deepseek is worth
+> the extra $0.0036. The price ranking is also not the quality ranking: qwen
+> cost 50× deepseek and was worse; sol cost 6.6× deepseek for the same result.
+> Note that deepseek still produced ~3,900 output tokens per sentence — it is
+> cheap because its *rate* is low ($0.28/M out), not because it is brief.
 
 ---
 
@@ -299,7 +405,18 @@ model actually received in each case.
 > probably because they reassemble the letters from context and the
 > substitution touches only 3 letters. The tokenizer explains why it is
 > *harder* (more tokens, no whole-word tokens, mixed scripts); it does not mean
-> every model fails. TODO: compare with gemma/qwen/deepseek.
+> every model fails.
+>
+> The one model that did fail is the smallest one: Gemma (26B total, ~4B
+> active parameters) turned *Aлaяқtарға* into *Алақтарға* — it swapped the
+> Latin letters back but dropped the я. That is what you would expect if the
+> model has to rebuild the word from fragments (`'A','л','a','я','қ','t',…`
+> in o200k) instead of recognising one familiar token like `'лая'`: put the
+> fragments back slightly wrong and you get a plausible-looking non-word.
+> Gemma got *Дoнaлльд Tрамп* exactly right, though — the context
+> ("Трамп", "Ким Чен Ын") pins down the famous name even when its letters
+> are fragmented. Caveat: these are o200k streams, not Gemma's own tokenizer
+> (see question 3), so this is a plausible mechanism, not a measured one.
 
 **3. Name one thing this measurement does not explain about your Sublab Medium
 results.** You measured OpenAI's tokenizers; three of your six models were not
@@ -313,6 +430,17 @@ OpenAI's. What follows, and what would you have to do to close the gap?
 > (e.g. from Hugging Face with `transformers.AutoTokenizer` for the open-weight
 > Gemma/Qwen/DeepSeek checkpoints) and repeat measurements A and B, or compare
 > against the `usage.prompt_tokens` OpenRouter reports for the same prompt.
-> It also does not explain differences *between* luna, terra and sol: they
+>
+> My own Medium numbers already show the gap is real: the *same eight
+> prompts* were 1,372 input tokens for every OpenAI model, but 1,492 for
+> Gemma, 1,850 for Qwen and 1,939 for DeepSeek (as reported by OpenRouter,
+> which also includes each model's chat-template overhead). Different
+> tokenizers, different counts — so the o200k pieces I pasted in B are not
+> the pieces Gemma saw when it broke KZ-03.
+>
+> The measurement also says nothing about **output** cost, which dominated
+> Medium: qwen's 139,952 output tokens and gemma's single 32,768-token runaway
+> on KZ-05 are about how a model reasons and when it stops, not about how the
+> input was split. It also does not explain differences *between* luna, terra and sol: they
 > share the same tokenizer (identical 1,372 input tokens) yet differ in
 > quality — that comes from model size and reasoning, not tokenization.

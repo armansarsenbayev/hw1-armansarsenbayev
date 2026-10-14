@@ -39,6 +39,10 @@ RATES_PER_MTOK = {
     "gpt-5.6-sol": (5.00, 30.00),
     # Reached through OpenRouter
     "google/gemma-4-26b-a4b-it:free": (0.00, 0.00),
+    # Paid route to the same Gemma weights, used because :free kept returning
+    # 429 (upstream shared pool rate-limited). Price from OpenRouter /models,
+    # retrieved 2026-10-14.
+    "google/gemma-4-26b-a4b-it": (0.0765, 0.255),
     "qwen/qwen3.8-27b": (0.45, 3.20),
     "deepseek/deepseek-v4-flash-0731": (0.14, 0.28),
 }
@@ -311,4 +315,5 @@ if __name__ == "__main__":
         raise SystemExit("Write turn 5 in Kazakh or Russian first.")
 
     run_script("gpt-5.6-luna", "openai")
-    run_script("google/gemma-4-26b-a4b-it:free", "openrouter")
+    # :free kept returning 429 (upstream pool rate-limited); same weights, paid.
+    run_script("google/gemma-4-26b-a4b-it", "openrouter")
